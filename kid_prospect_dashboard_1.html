@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>k-ID Prospect Intelligence Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy:#0d1b2a;--navy2:#1a2e42;--teal:#00b4d8;--mint:#00f5d4;
+    --amber:#ffb703;--red:#e63946;--green:#06d6a0;--card:#132033;
+    --card2:#1c2e42;--border:#1e3a52;--text:#e2eef6;--muted:#6b8fa8;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text);min-height:100vh;overflow-x:hidden}
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,180,216,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,180,216,.04) 1px,transparent 1px);background-size:48px 48px;z-index:0;animation:gridDrift 20s linear infinite}
+  @keyframes gridDrift{from{transform:translate(0,0)}to{transform:translate(48px,48px)}}
+  body::after{content:'';position:fixed;top:-2px;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--teal),var(--mint),transparent);z-index:100;animation:scan 5s ease-in-out infinite;opacity:.5}
+  @keyframes scan{0%,100%{top:-2px;opacity:0}10%{opacity:1}90%{opacity:1}99%{top:100vh;opacity:0}}
+  .app{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:20px}
+  @keyframes fadeDown{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+  /* TOPBAR */
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:rgba(19,32,51,.95);border:1px solid var(--border);border-radius:12px;margin-bottom:20px;backdrop-filter:blur(12px);animation:fadeDown .5s ease forwards}
+  .logo{display:flex;align-items:center;gap:12px}
+  .logo-badge{width:36px;height:36px;background:linear-gradient(135deg,var(--teal),var(--mint));border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-weight:500;font-size:14px;color:var(--navy)}
+  .logo-text{font-family:'Syne',sans-serif;font-weight:700;font-size:17px}
+  .logo-sub{font-family:'DM Mono',monospace;font-size:9px;color:var(--teal);letter-spacing:2px;text-transform:uppercase;display:block;margin-top:1px}
+  .nav-pills{display:flex;gap:4px;background:var(--navy);border:1px solid var(--border);border-radius:8px;padding:4px}
+  .nav-pill{padding:7px 18px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;transition:all .2s;color:var(--muted);border:none;background:none;font-family:'DM Sans',sans-serif}
+  .nav-pill.active{background:var(--teal);color:var(--navy)}
+  .nav-pill:hover:not(.active){color:var(--text);background:var(--border)}
+  .live-badge{display:flex;align-items:center;gap:8px;font-family:'DM Mono',monospace;font-size:11px;color:var(--green);letter-spacing:1px}
+  .pulse{width:8px;height:8px;background:var(--green);border-radius:50%;animation:pulseA 2s infinite}
+  @keyframes pulseA{0%,100%{box-shadow:0 0 0 0 rgba(6,214,160,.6)}50%{box-shadow:0 0 0 7px rgba(6,214,160,0)}}
+
+  /* STAT ROW */
+  .stat-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;opacity:0;animation:fadeUp .5s ease forwards;position:relative;overflow:hidden;min-width:0}
+  .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--ac,var(--teal));border-radius:12px 12px 0 0}
+  .stat-card:nth-child(1){animation-delay:.1s;--ac:var(--teal)}.stat-card:nth-child(2){animation-delay:.2s;--ac:var(--mint)}.stat-card:nth-child(3){animation-delay:.3s;--ac:var(--amber)}.stat-card:nth-child(4){animation-delay:.4s;--ac:var(--green)}.stat-card:nth-child(5){animation-delay:.5s;--ac:var(--red)}
+  .stat-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;font-family:'DM Mono',monospace}
+  /* FIX: fluid font prevents overflow */
+  .stat-value{font-family:'Syne',sans-serif;font-size:clamp(15px,2vw,28px);font-weight:800;color:var(--text);line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stat-change{font-size:11px;margin-top:6px;display:flex;align-items:center;gap:4px}
+  .stat-change.up{color:var(--green)}.stat-change.down{color:var(--red)}.stat-change.neutral{color:var(--muted)}
+
+  /* TAB PANELS */
+  .tab-panel{display:none}.tab-panel.active{display:block;animation:fadeUp .3s ease forwards;opacity:0}
+
+  /* SHARED CARD */
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:22px}
+  .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+  .card-title{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--text)}
+  .card-badge{font-family:'DM Mono',monospace;font-size:9px;padding:3px 9px;border-radius:20px;background:rgba(0,180,216,.1);color:var(--teal);border:1px solid rgba(0,180,216,.2);letter-spacing:1px}
+
+  /* PIPELINE */
+  .main-grid{display:grid;grid-template-columns:1fr 340px;gap:18px;margin-bottom:18px}
+  .prospect-table{width:100%;border-collapse:collapse}
+  .prospect-table thead th{text-align:left;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);padding:0 10px 10px;border-bottom:1px solid var(--border)}
+  .prospect-table tbody tr{transition:background .2s;cursor:pointer}
+  .prospect-table tbody tr:hover{background:rgba(0,180,216,.05)}
+  .prospect-table tbody td{padding:12px 10px;font-size:12px;border-bottom:1px solid rgba(30,58,82,.5)}
+  .company-name{font-weight:500;color:var(--text)}.company-type{font-size:10px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace}
+  .score-bar{display:flex;align-items:center;gap:8px}
+  .bar-track{flex:1;height:5px;background:var(--border);border-radius:99px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:99px;transition:width 1s cubic-bezier(.34,1.56,.64,1)}
+  .score-num{font-family:'DM Mono',monospace;font-size:12px;color:var(--text);min-width:26px;text-align:right}
+  .stage-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;border:1px solid}
+  .stage-pill.hot{color:var(--red);background:rgba(230,57,70,.1);border-color:rgba(230,57,70,.25)}.stage-pill.warm{color:var(--amber);background:rgba(255,183,3,.1);border-color:rgba(255,183,3,.25)}.stage-pill.cold{color:var(--teal);background:rgba(0,180,216,.1);border-color:rgba(0,180,216,.25)}.stage-pill.qualified{color:var(--green);background:rgba(6,214,160,.1);border-color:rgba(6,214,160,.25)}
+  .signal-chips{display:flex;flex-wrap:wrap;gap:4px}
+  .chip{font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(0,180,216,.08);color:var(--teal);border:1px solid rgba(0,180,216,.15);font-family:'DM Mono',monospace;white-space:nowrap}
+  .chip.risk{background:rgba(230,57,70,.08);color:var(--red);border-color:rgba(230,57,70,.2)}.chip.law{background:rgba(255,183,3,.08);color:var(--amber);border-color:rgba(255,183,3,.2)}
+  .right-col{display:flex;flex-direction:column;gap:18px}
+  .funnel-stage{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:8px;background:var(--card2);border-left:3px solid var(--fac,var(--teal));transition:transform .2s;cursor:pointer;margin-bottom:8px}
+  .funnel-stage:hover{transform:translateX(4px)}.funnel-label{flex:1;font-size:12px;color:var(--text);font-weight:500}.funnel-count{font-family:'DM Mono',monospace;font-size:18px;font-weight:500}.funnel-pct{font-size:10px;color:var(--muted);margin-top:1px}
+  .bottom-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}
+  .feed-item{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);font-size:12px}
+  .feed-dot{width:8px;height:8px;border-radius:50%;margin-top:4px;flex-shrink:0}
+  .feed-action{color:var(--text);line-height:1.5}.feed-time{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:2px}.feed-co{color:var(--teal);font-weight:500}
+  .icp-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .icp-item{padding:12px;background:var(--card2);border-radius:8px}
+  .icp-key{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;letter-spacing:1px;margin-bottom:5px}
+  .icp-count{font-family:'Syne',sans-serif;font-size:24px;font-weight:800}
+  .section-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--teal);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+
+  /* ACCOUNTS */
+  .accounts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .account-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;cursor:pointer;transition:all .2s}
+  .account-card:hover{border-color:var(--teal);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,180,216,.1)}
+  .account-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:12px}
+  .account-name{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;margin-bottom:2px}
+  .account-sector{font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+  .account-stat-row{display:flex;gap:14px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+  .account-stat-val{font-family:'Syne',sans-serif;font-weight:700;font-size:18px}
+  .account-stat-lbl{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace}
+  .priority-high{color:var(--red)}.priority-med{color:var(--amber)}.priority-low{color:var(--teal)}
+
+  /* REGULATION */
+  .reg-full-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .reg-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;transition:all .2s}
+  .reg-card:hover{border-color:var(--teal)}
+  .reg-card-name{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--text);margin-bottom:3px}
+  .reg-card-geo{font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);margin-bottom:12px}
+  .reg-card-body{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:14px}
+  .reg-card-footer{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .status-badge{padding:3px 9px;border-radius:20px;font-size:9px;font-family:'DM Mono',monospace;border:1px solid;letter-spacing:1px}
+  .status-badge.active{color:var(--green);border-color:rgba(6,214,160,.3);background:rgba(6,214,160,.08)}.status-badge.pending{color:var(--amber);border-color:rgba(255,183,3,.3);background:rgba(255,183,3,.08)}.status-badge.incoming{color:var(--red);border-color:rgba(230,57,70,.3);background:rgba(230,57,70,.08)}
+  .affected-count{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
+
+  /* OUTREACH */
+  .outreach-layout{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .composer{display:flex;flex-direction:column;gap:12px}
+  .comp-select{background:var(--card2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 13px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none;cursor:pointer;width:100%}
+  .comp-select:focus{border-color:var(--teal)}
+  .comp-preview{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:14px;min-height:150px;font-size:12px;line-height:1.75;color:var(--text);transition:opacity .25s}
+  .comp-preview .highlight{color:var(--teal);font-weight:500}.comp-preview .highlight2{color:var(--amber);font-weight:500}
+  .comp-actions{display:flex;gap:8px}
+  .btn{padding:9px 16px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;transition:all .2s}
+  .btn-primary{background:var(--teal);color:var(--navy);flex:1}.btn-primary:hover{background:var(--mint);transform:translateY(-1px)}
+  .btn-secondary{background:var(--card2);color:var(--muted);border:1px solid var(--border)}.btn-secondary:hover{color:var(--text);border-color:var(--teal)}
+  .tip-item{background:var(--card2);border-radius:8px;padding:14px;border-left:3px solid var(--teal);margin-bottom:10px}
+  .tip-persona{font-size:10px;font-family:'DM Mono',monospace;color:var(--teal);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px}
+  .tip-text{font-size:12px;color:var(--text);line-height:1.6}
+  .copy-toast{position:fixed;bottom:24px;right:24px;background:var(--green);color:var(--navy);padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;z-index:999;opacity:0;transform:translateY(10px);transition:all .3s;pointer-events:none}
+  .copy-toast.show{opacity:1;transform:translateY(0)}
+
+  ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--navy)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+  @media(max-width:1100px){.main-grid{grid-template-columns:1fr}.bottom-row,.accounts-grid,.reg-full-grid,.outreach-layout{grid-template-columns:1fr 1fr}.stat-row{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:700px){.stat-row{grid-template-columns:1fr 1fr}.bottom-row,.accounts-grid,.reg-full-grid,.outreach-layout{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <div class="logo">
+      <div class="logo-badge">k</div>
+      <div><div class="logo-text">k-ID Prospect Intelligence</div><span class="logo-sub">SDR Command Center · v1.0</span></div>
+    </div>
+    <div class="nav-pills">
+      <button class="nav-pill active" onclick="switchTab('pipeline',this)">Pipeline</button>
+      <button class="nav-pill" onclick="switchTab('accounts',this)">Accounts</button>
+      <button class="nav-pill" onclick="switchTab('regulation',this)">Regulation</button>
+      <button class="nav-pill" onclick="switchTab('outreach',this)">Outreach</button>
+    </div>
+    <div class="live-badge"><div class="pulse"></div>LIVE · Updated 2m ago</div>
+  </div>
+
+  <div class="stat-row">
+    <div class="stat-card"><div class="stat-label">Accounts Mapped</div><div class="stat-value" id="s1">0</div><div class="stat-change up">↑ 12 this week</div></div>
+    <div class="stat-card"><div class="stat-label">Pipeline Value</div><div class="stat-value" id="s2">$0</div><div class="stat-change up">↑ 18% MoM</div></div>
+    <div class="stat-card"><div class="stat-label">Meetings Booked</div><div class="stat-value" id="s3">0</div><div class="stat-change neutral">14 this quarter</div></div>
+    <div class="stat-card"><div class="stat-label">Avg ICP Score</div><div class="stat-value" id="s4">0</div><div class="stat-change up">↑ 4 pts vs last mo</div></div>
+    <div class="stat-card"><div class="stat-label">Regulations Active</div><div class="stat-value" id="s5">0</div><div class="stat-change down">3 incoming</div></div>
+  </div>
+
+  <!-- PIPELINE -->
+  <div class="tab-panel active" id="tab-pipeline">
+    <div class="main-grid">
+      <div class="card">
+        <div class="card-header"><div class="card-title">🎯 Top Prospect Accounts</div><span class="card-badge">AI-SCORED</span></div>
+        <table class="prospect-table">
+          <thead><tr><th>Company</th><th>ICP Score</th><th>Stage</th><th>Trigger Signals</th><th>Stakeholders</th></tr></thead>
+          <tbody id="prospect-body"></tbody>
+        </table>
+      </div>
+      <div class="right-col">
+        <div class="card">
+          <div class="card-header"><div class="card-title">📊 Pipeline Funnel</div><span class="card-badge">LIVE</span></div>
+          <div class="funnel-stage" style="--fac:var(--teal)"><div><div class="funnel-label">Targeted</div><div class="funnel-pct">Universe</div></div><div style="text-align:right"><div class="funnel-count">247</div><div class="funnel-pct">100%</div></div></div>
+          <div class="funnel-stage" style="--fac:#4ecdc4"><div><div class="funnel-label">Contacted</div><div class="funnel-pct">First touch sent</div></div><div style="text-align:right"><div class="funnel-count">142</div><div class="funnel-pct">57%</div></div></div>
+          <div class="funnel-stage" style="--fac:var(--amber)"><div><div class="funnel-label">Engaged</div><div class="funnel-pct">Opened / replied</div></div><div style="text-align:right"><div class="funnel-count">38</div><div class="funnel-pct">27%</div></div></div>
+          <div class="funnel-stage" style="--fac:var(--green)"><div><div class="funnel-label">Meeting Booked</div><div class="funnel-pct">Qualified</div></div><div style="text-align:right"><div class="funnel-count">14</div><div class="funnel-pct">37%</div></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">⚖️ Regulation Radar</div><span class="card-badge">200+ MARKETS</span></div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-radius:8px;background:var(--card2);font-size:12px"><div><div style="font-weight:500">UK Age Appropriate Design Code</div><div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">UK · 230+ companies affected</div></div><div style="width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px rgba(6,214,160,.5)"></div></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-radius:8px;background:var(--card2);font-size:12px"><div><div style="font-weight:500">COPPA 2.0</div><div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">US · 2024 enforcement wave</div></div><div style="width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px rgba(6,214,160,.5)"></div></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-radius:8px;background:var(--card2);font-size:12px"><div><div style="font-weight:500">EU Digital Services Act</div><div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">EU · Minors provisions</div></div><div style="width:8px;height:8px;border-radius:50%;background:var(--amber)"></div></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-radius:8px;background:var(--card2);font-size:12px"><div><div style="font-weight:500">Australia Online Safety Act</div><div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">AU · Age verification mandate</div></div><div style="width:8px;height:8px;border-radius:50%;background:var(--red);animation:pulseA 2s infinite"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="bottom-row">
+      <div class="card">
+        <div class="card-header"><div class="card-title">⚡ Intelligence Feed</div><span class="card-badge">REAL-TIME</span></div>
+        <div class="feed-item"><div class="feed-dot" style="background:var(--red)"></div><div><div class="feed-action"><span class="feed-co">Roblox</span> received COPPA enforcement notice — high urgency trigger</div><div class="feed-time">3 min ago</div></div></div>
+        <div class="feed-item"><div class="feed-dot" style="background:var(--amber)"></div><div><div class="feed-action"><span class="feed-co">Discord</span> Head of Trust &amp; Safety changed roles — reach out window open</div><div class="feed-time">1h ago</div></div></div>
+        <div class="feed-item"><div class="feed-dot" style="background:var(--green)"></div><div><div class="feed-action"><span class="feed-co">Snap Inc</span> published youth safety whitepaper — intent signal detected</div><div class="feed-time">3h ago</div></div></div>
+        <div class="feed-item"><div class="feed-dot" style="background:var(--teal)"></div><div><div class="feed-action"><span class="feed-co">Minecraft</span> posted Head of Age Compliance role → ICP signal</div><div class="feed-time">5h ago</div></div></div>
+        <div class="feed-item"><div class="feed-dot" style="background:var(--amber)"></div><div><div class="feed-action"><span class="feed-co">TikTok</span> Australia age ban — 12 adjacent platforms now at-risk</div><div class="feed-time">Yesterday</div></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">🔍 ICP Breakdown</div><span class="card-badge">SEGMENTED</span></div>
+        <div class="icp-grid">
+          <div class="icp-item"><div class="icp-key">Gaming</div><div class="icp-count" style="color:var(--teal)">68</div><div style="font-size:10px;color:var(--muted);margin-top:3px">accounts</div></div>
+          <div class="icp-item"><div class="icp-key">Social</div><div class="icp-count" style="color:var(--mint)">52</div><div style="font-size:10px;color:var(--muted);margin-top:3px">accounts</div></div>
+          <div class="icp-item"><div class="icp-key">EdTech</div><div class="icp-count" style="color:var(--amber)">41</div><div style="font-size:10px;color:var(--muted);margin-top:3px">accounts</div></div>
+          <div class="icp-item"><div class="icp-key">AI / Dev</div><div class="icp-count" style="color:var(--green)">86</div><div style="font-size:10px;color:var(--muted);margin-top:3px">accounts</div></div>
+        </div>
+        <div style="margin-top:14px"><div class="section-label">Stakeholder Mix</div><div style="display:flex;flex-direction:column;gap:8px" id="stakeholder-bars"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">📈 Weekly Activity</div><span class="card-badge">THIS WEEK</span></div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:5px"><span style="color:var(--muted);font-family:'DM Mono',monospace">EMAILS SENT</span><span style="font-weight:600">84</span></div><div style="height:5px;background:var(--border);border-radius:99px;overflow:hidden"><div style="width:0%;height:100%;background:var(--teal);border-radius:99px;transition:width 1.2s ease" id="wbar1" data-w="84"></div></div></div>
+          <div><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:5px"><span style="color:var(--muted);font-family:'DM Mono',monospace">LINKEDIN TOUCHES</span><span style="font-weight:600">62</span></div><div style="height:5px;background:var(--border);border-radius:99px;overflow:hidden"><div style="width:0%;height:100%;background:var(--mint);border-radius:99px;transition:width 1.2s .1s ease" id="wbar2" data-w="62"></div></div></div>
+          <div><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:5px"><span style="color:var(--muted);font-family:'DM Mono',monospace">REPLIES RECEIVED</span><span style="font-weight:600">23</span></div><div style="height:5px;background:var(--border);border-radius:99px;overflow:hidden"><div style="width:0%;height:100%;background:var(--amber);border-radius:99px;transition:width 1.2s .2s ease" id="wbar3" data-w="27"></div></div></div>
+          <div><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:5px"><span style="color:var(--muted);font-family:'DM Mono',monospace">MEETINGS SET</span><span style="font-weight:600">6</span></div><div style="height:5px;background:var(--border);border-radius:99px;overflow:hidden"><div style="width:0%;height:100%;background:var(--green);border-radius:99px;transition:width 1.2s .3s ease" id="wbar4" data-w="26"></div></div></div>
+          <div style="margin-top:8px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:var(--muted)">Reply rate</span><span style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--green)">27%</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:var(--muted)">Meeting rate</span><span style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--teal)">26%</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACCOUNTS -->
+  <div class="tab-panel" id="tab-accounts">
+    <div class="accounts-grid" id="accounts-grid"></div>
+  </div>
+
+  <!-- REGULATION -->
+  <div class="tab-panel" id="tab-regulation">
+    <div class="reg-full-grid">
+      <div class="reg-card"><div class="reg-card-name">🇬🇧 UK Age Appropriate Design Code</div><div class="reg-card-geo">United Kingdom · Children's Commissioner</div><div class="reg-card-body">Requires digital services likely accessed by children to provide privacy protections by default. Applies to apps, games, websites, and connected toys. Mandates age assurance mechanisms and restricts data profiling of under-18s.</div><div class="reg-card-footer"><span class="status-badge active">ACTIVE</span><span class="affected-count">230+ platforms affected</span></div></div>
+      <div class="reg-card"><div class="reg-card-name">🇺🇸 COPPA 2.0</div><div class="reg-card-geo">United States · FTC Enforcement</div><div class="reg-card-body">Major update expanding protections to teenagers under 17. Prohibits targeted advertising to minors and introduces new consent requirements. FTC enforcement actions escalating in 2024–2025 with significant fines.</div><div class="reg-card-footer"><span class="status-badge active">ACTIVE</span><span class="affected-count">Major enforcement wave</span></div></div>
+      <div class="reg-card"><div class="reg-card-name">🇪🇺 EU Digital Services Act — Minors</div><div class="reg-card-geo">European Union · All 27 member states</div><div class="reg-card-body">DSA requires very large online platforms to assess and mitigate risks to minors. Age verification and parental controls increasingly required. Non-compliance fines up to 6% of global turnover.</div><div class="reg-card-footer"><span class="status-badge pending">IMPLEMENTATION</span><span class="affected-count">All EU market platforms</span></div></div>
+      <div class="reg-card"><div class="reg-card-name">🇦🇺 Australia Online Safety Act</div><div class="reg-card-geo">Australia · eSafety Commissioner</div><div class="reg-card-body">Australia's landmark social media ban for under-16s passed Nov 2024. Platforms must take reasonable steps to verify age. Up to AUD $50M in fines. Sets a global precedent — APAC markets watching closely.</div><div class="reg-card-footer"><span class="status-badge incoming">⚡ INCOMING</span><span class="affected-count">All social / gaming platforms</span></div></div>
+      <div class="reg-card"><div class="reg-card-name">🇺🇸 Texas SCOPE Act</div><div class="reg-card-geo">Texas, USA · State-level (15+ state wave)</div><div class="reg-card-body">Requires parental consent for minors to use social media platforms. Age verification via government ID or third-party systems mandated. Part of a wave — 15+ US states have similar bills in progress.</div><div class="reg-card-footer"><span class="status-badge incoming">⚡ INCOMING</span><span class="affected-count">US state-level wave</span></div></div>
+      <div class="reg-card"><div class="reg-card-name">🌏 APAC Youth Safety Wave</div><div class="reg-card-geo">South Korea · Singapore · India · Others</div><div class="reg-card-body">Multiple APAC markets introducing age verification requirements following Australia's lead. South Korea's PIPA, Singapore's Online Safety Act, and India's DPDP Act all contain youth provisions requiring compliance infrastructure.</div><div class="reg-card-footer"><span class="status-badge pending">EMERGING</span><span class="affected-count">Entire APAC region</span></div></div>
+    </div>
+  </div>
+
+  <!-- OUTREACH -->
+  <div class="tab-panel" id="tab-outreach">
+    <div class="outreach-layout">
+      <div class="card">
+        <div class="card-header"><div class="card-title">✉️ Outreach Message Composer</div><span class="card-badge">AI-POWERED</span></div>
+        <div class="composer">
+          <select class="comp-select" id="persona-select" onchange="updateTemplate()">
+            <option value="">Select stakeholder persona…</option>
+            <option value="head_privacy">Head of Privacy / DPO</option>
+            <option value="trust_safety">Head of Trust &amp; Safety</option>
+            <option value="vp_product">VP Product</option>
+            <option value="cto">CTO / Engineering Lead</option>
+            <option value="legal">VP Legal / General Counsel</option>
+          </select>
+          <select class="comp-select" id="trigger-select" onchange="updateTemplate()">
+            <option value="">Select trigger event…</option>
+            <option value="regulation">New regulation affecting their market</option>
+            <option value="hiring">Hiring for compliance / safety role</option>
+            <option value="lawsuit">Recent enforcement action / lawsuit</option>
+            <option value="expansion">Expanding to new market</option>
+            <option value="product">Launched youth-facing feature</option>
+          </select>
+          <div class="comp-preview" id="comp-preview"><span style="color:var(--muted);font-style:italic">Select a persona and trigger to generate a personalised message…</span></div>
+          <div class="comp-actions">
+            <button class="btn btn-secondary" onclick="updateTemplate()">↺ Regenerate</button>
+            <button class="btn btn-primary" onclick="copyMessage()">Copy Message</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">💡 Persona Playbook</div><span class="card-badge">TIPS</span></div>
+        <div class="tip-item"><div class="tip-persona">Head of Privacy / DPO</div><div class="tip-text">Lead with the regulation name + their jurisdiction. They track compliance mandates obsessively. Mention specific fine exposure: COPPA $50K/violation, DSA 6% global revenue.</div></div>
+        <div class="tip-item" style="border-color:var(--amber)"><div class="tip-persona" style="color:var(--amber)">Trust &amp; Safety</div><div class="tip-text">T&amp;S teams are always understaffed and over-blamed. Lead with "so your team doesn't have to build this." Mention enforcement actions from their vertical. They respond to velocity.</div></div>
+        <div class="tip-item" style="border-color:var(--green)"><div class="tip-persona" style="color:var(--green)">VP Product</div><div class="tip-text">Compliance is a launch blocker for product teams. Frame k-ID as removing the blocker. The CDK handles logic for 200+ markets so they ship once globally.</div></div>
+        <div class="tip-item" style="border-color:var(--mint)"><div class="tip-persona" style="color:var(--mint)">Engineering / CTO</div><div class="tip-text">Lead technical — single API, auto-updating compliance logic, no rebuild per jurisdiction. They'll appreciate not maintaining legal logic in the codebase.</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<div class="copy-toast" id="toast">✓ Copied to clipboard!</div>
+
+<script>
+function switchTab(name,btn){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-pill').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+  if(name==='pipeline') setTimeout(animateBars,60);
+}
+function animateCounter(el,target,prefix,suffix,dur){
+  prefix=prefix||'';suffix=suffix||'';dur=dur||1600;
+  let v=0,step=target/(dur/16);
+  const t=setInterval(()=>{v=Math.min(v+step,target);el.textContent=prefix+Math.floor(v).toLocaleString()+suffix;if(v>=target)clearInterval(t);},16);
+}
+setTimeout(()=>{
+  animateCounter(document.getElementById('s1'),247);
+  animateCounter(document.getElementById('s2'),1200000,'$','',2000);
+  animateCounter(document.getElementById('s3'),14);
+  animateCounter(document.getElementById('s4'),87,'','/100');
+  animateCounter(document.getElementById('s5'),32);
+},400);
+
+const prospects=[
+  {name:"Roblox",type:"GAMING PLATFORM",score:94,stage:"hot",signals:["COPPA alert","UK AADC"],stk:"Legal · T&S · Policy"},
+  {name:"Discord",type:"SOCIAL / COMMS",score:88,stage:"warm",signals:["EU DSA","Hiring T&S"],stk:"Privacy · Product"},
+  {name:"Snap Inc.",type:"SOCIAL PLATFORM",score:85,stage:"qualified",signals:["Youth paper","AUS ban"],stk:"Privacy · Legal"},
+  {name:"Minecraft / MSFT",type:"GAMING / CLOUD",score:82,stage:"warm",signals:["Compliance hire","DSA"],stk:"T&S · Engineering"},
+  {name:"Duolingo",type:"EDTECH",score:79,stage:"cold",signals:["COPPA 2.0","Age UX"],stk:"Product · Legal"},
+  {name:"Epic Games",type:"GAMING PLATFORM",score:76,stage:"cold",signals:["Fortnite age","Texas SCOPE"],stk:"Policy · Legal"},
+];
+const scoreColor=s=>s>=90?'var(--red)':s>=80?'var(--amber)':s>=70?'var(--teal)':'var(--muted)';
+const tbody=document.getElementById('prospect-body');
+prospects.forEach((p,i)=>{
+  const label={hot:'🔥 Hot',warm:'⚡ Warm',cold:'🧊 Cold',qualified:'✅ Qualified'}[p.stage];
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td><div class="company-name">${p.name}</div><div class="company-type">${p.type}</div></td>
+    <td><div class="score-bar"><div class="bar-track"><div class="bar-fill" id="bar-${i}" style="width:0%;background:${scoreColor(p.score)}"></div></div><div class="score-num">${p.score}</div></div></td>
+    <td><span class="stage-pill ${p.stage}">${label}</span></td>
+    <td><div class="signal-chips">${p.signals.map(s=>`<span class="chip ${s.includes('COPPA')||s.includes('ban')||s.includes('alert')?'risk':s.includes('DSA')||s.includes('SCOPE')||s.includes('AADC')?'law':''}">${s}</span>`).join('')}</div></td>
+    <td style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">${p.stk}</td>`;
+  tbody.appendChild(tr);
+});
+function animateBars(){
+  prospects.forEach((_,i)=>{const el=document.getElementById('bar-'+i);if(el){el.style.width='0%';setTimeout(()=>{el.style.width=prospects[i].score+'%';},80+i*70);}});
+  ['wbar1','wbar2','wbar3','wbar4'].forEach((id,i)=>{const el=document.getElementById(id);if(el){const w=el.dataset.w;el.style.width='0%';setTimeout(()=>{el.style.width=w+'%';},200+i*100);}});
+}
+setTimeout(animateBars,600);
+
+const stk=[{r:'Privacy / DPO',p:34,c:'var(--teal)'},{r:'Trust & Safety',p:28,c:'var(--mint)'},{r:'Legal / GC',p:24,c:'var(--amber)'},{r:'Engineering',p:14,c:'var(--green)'}];
+const sc=document.getElementById('stakeholder-bars');
+stk.forEach((s,i)=>{
+  const d=document.createElement('div');
+  d.style.cssText='display:flex;align-items:center;gap:10px;font-size:11px';
+  d.innerHTML=`<div style="width:86px;color:var(--muted);font-family:'DM Mono',monospace;font-size:10px;flex-shrink:0">${s.r}</div><div style="flex:1;height:5px;background:var(--border);border-radius:99px;overflow:hidden"><div id="sbar-${i}" style="height:100%;width:0%;background:${s.c};border-radius:99px;transition:width 1.2s cubic-bezier(.34,1.56,.64,1)"></div></div><div style="font-family:'DM Mono',monospace;color:var(--text);min-width:26px;text-align:right">${s.p}%</div>`;
+  sc.appendChild(d);
+  setTimeout(()=>{document.getElementById('sbar-'+i).style.width=s.p+'%';},900+i*100);
+});
+
+const accounts=[
+  {name:"Roblox",icon:"🎮",sector:"Gaming Platform",bg:"rgba(0,180,216,.12)",priority:"high",score:94,contacts:8,signals:3},
+  {name:"Discord",icon:"💬",sector:"Social / Comms",bg:"rgba(0,245,212,.1)",priority:"med",score:88,contacts:5,signals:2},
+  {name:"Snap Inc.",icon:"👻",sector:"Social Platform",bg:"rgba(255,183,3,.1)",priority:"high",score:85,contacts:6,signals:3},
+  {name:"Minecraft",icon:"⛏️",sector:"Gaming / Cloud",bg:"rgba(6,214,160,.1)",priority:"med",score:82,contacts:4,signals:2},
+  {name:"Duolingo",icon:"🦉",sector:"EdTech",bg:"rgba(255,183,3,.08)",priority:"med",score:79,contacts:3,signals:1},
+  {name:"Epic Games",icon:"🕹️",sector:"Gaming Platform",bg:"rgba(230,57,70,.08)",priority:"low",score:76,contacts:3,signals:2},
+  {name:"TikTok",icon:"🎵",sector:"Social / Video",bg:"rgba(0,180,216,.08)",priority:"high",score:91,contacts:7,signals:4},
+  {name:"Khan Academy",icon:"📚",sector:"EdTech",bg:"rgba(6,214,160,.08)",priority:"low",score:72,contacts:2,signals:1},
+  {name:"YouTube Kids",icon:"▶️",sector:"Video / Kids",bg:"rgba(230,57,70,.1)",priority:"high",score:89,contacts:6,signals:3},
+];
+const ag=document.getElementById('accounts-grid');
+accounts.forEach(a=>{
+  const pl={high:'🔴 High Priority',med:'🟡 Medium',low:'🔵 Low'}[a.priority];
+  const pc={high:'priority-high',med:'priority-med',low:'priority-low'}[a.priority];
+  const c=document.createElement('div');c.className='account-card';
+  c.innerHTML=`<div class="account-icon" style="background:${a.bg}">${a.icon}</div><div class="account-name">${a.name}</div><div class="account-sector">${a.sector}</div><div style="margin-top:10px;font-size:11px" class="${pc}">${pl}</div><div class="account-stat-row"><div class="account-stat"><div class="account-stat-val" style="color:var(--teal)">${a.score}</div><div class="account-stat-lbl">ICP Score</div></div><div class="account-stat"><div class="account-stat-val" style="color:var(--mint)">${a.contacts}</div><div class="account-stat-lbl">Contacts</div></div><div class="account-stat"><div class="account-stat-val" style="color:var(--amber)">${a.signals}</div><div class="account-stat-lbl">Signals</div></div></div>`;
+  ag.appendChild(c);
+});
+
+const templates={
+  head_privacy_regulation:`Hi [Name], <span class="highlight">[Company]</span> falls directly under the <span class="highlight2">new regulation</span> affecting age verification requirements. I'm with <span class="highlight">k-ID</span> — we've built the Compliance Development Kit (CDK) that handles age assurance and parental consent across <span class="highlight2">200+ markets</span> via a single API. Rather than rebuilding compliance for each jurisdiction, teams like yours plug in once. Worth a 20-minute call to walk through how it works for your stack?`,
+  head_privacy_hiring:`Hi [Name], noticed <span class="highlight">[Company]</span> is hiring a <span class="highlight2">compliance / privacy role</span> — usually a signal you're building this capability internally. Before you staff up, it might be worth seeing what <span class="highlight">k-ID</span>'s CDK handles automatically (age verification, parental consent, regulatory logic across 200+ markets). Could save your new hire 6 months of build time. Happy to share a technical overview?`,
+  head_privacy_lawsuit:`Hi [Name], the enforcement action against <span class="highlight">[Company]</span> likely has your team under scrutiny. <span class="highlight">k-ID</span>'s CDK provides demonstrable compliance coverage — age assurance and parental consent across 200+ markets, documented and audit-ready. Might be worth a conversation while your team reviews its current approach?`,
+  trust_safety_regulation:`Hi [Name], the <span class="highlight2">new regulation</span> landing on <span class="highlight">[Company]</span> will likely add to your compliance load. <span class="highlight">k-ID</span> takes age verification and parental consent infrastructure off your plate entirely — one API, 200+ markets, auto-updating as regulations change. Worth 20 minutes to see how other T&S teams are using it?`,
+  trust_safety_hiring:`Hi [Name], <span class="highlight">[Company]</span> is hiring for <span class="highlight2">compliance</span> — I work with many T&S teams who've gone through this build-vs-buy decision. <span class="highlight">k-ID</span>'s CDK handles age verification infrastructure so your team focuses on policy rather than plumbing. Love to show you the approach — 20 minutes?`,
+  trust_safety_lawsuit:`Hi [Name], the enforcement action against <span class="highlight">[Company]</span> is putting T&S teams under pressure across the industry. <span class="highlight">k-ID</span> is the infrastructure layer that handles age assurance so your team doesn't maintain it from scratch. We work with several major platforms. Would 20 minutes be valuable to compare approaches?`,
+  trust_safety_product:`Hi [Name], saw <span class="highlight">[Company]</span> launched a new youth-facing feature — the next compliance question is usually age gating and parental consent. <span class="highlight">k-ID</span>'s AgeKit handles this across all your markets via one API. Can I send over a short overview?`,
+  vp_product_expansion:`Hi [Name], expanding to a new market means a fresh set of age verification and youth safety regulations. <span class="highlight">k-ID</span> turns that complexity into a single API call — CDK covers regulatory logic across <span class="highlight2">200+ markets</span>. Product teams love that it removes compliance as a launch blocker. Happy to do a 20-minute product walkthrough?`,
+  vp_product_product:`Hi [Name], <span class="highlight">[Company]</span>'s new youth-facing feature will run into age gating requirements in multiple markets. <span class="highlight">k-ID</span>'s CDK handles all of that via one integration — ship once, stay compliant globally. Worth a quick conversation?`,
+  cto_regulation:`Hi [Name], the <span class="highlight2">new regulation</span> hitting <span class="highlight">[Company]</span>'s market will require age verification logic that's painful to build and maintain. <span class="highlight">k-ID</span>'s CDK is a single API that handles it all and auto-updates as regulations change — your engineers don't touch compliance logic again. Worth a quick technical conversation?`,
+  cto_product:`Hi [Name], age verification and parental consent logic usually lands on engineering when <span class="highlight">[Company]</span> builds youth-facing features. <span class="highlight">k-ID</span>'s CDK replaces all that with one API — 200+ markets, auto-updating. Your team ships faster, compliance stays current. Worth a quick technical conversation?`,
+  legal_regulation:`Hi [Name], the <span class="highlight2">new regulation</span> hitting <span class="highlight">[Company]</span>'s market creates real liability around age verification. <span class="highlight">k-ID</span> is the compliance infrastructure teams use to meet these requirements — CDK handles age assurance and parental consent across 200+ markets, with documentation that holds up in an audit. Given your remit, the architecture would give you confidence in your coverage. 20 minutes?`,
+  legal_lawsuit:`Hi [Name], the enforcement action against <span class="highlight">[Company]</span> is exactly the scenario <span class="highlight">k-ID</span> was built to prevent. Our CDK provides audit-ready age verification and parental consent infrastructure across 200+ markets — built with the regulatory documentation your legal team needs. Would a 20-minute architecture conversation be valuable right now?`,
+};
+function updateTemplate(){
+  const persona=document.getElementById('persona-select').value;
+  const trigger=document.getElementById('trigger-select').value;
+  const preview=document.getElementById('comp-preview');
+  if(!persona||!trigger){preview.innerHTML='<span style="color:var(--muted);font-style:italic">Select a persona and trigger to generate a personalised message…</span>';return;}
+  const key=persona+'_'+trigger;
+  const msg=templates[key]||templates[Object.keys(templates).find(k=>k.startsWith(persona))]||'<span style="color:var(--muted);font-style:italic">Great combo — try a slight variation.</span>';
+  preview.style.opacity='0';
+  setTimeout(()=>{preview.innerHTML=msg;preview.style.opacity='1';},180);
+}
+function copyMessage(){
+  const preview=document.getElementById('comp-preview');
+  const text=preview.innerText;
+  if(text.includes('Select a persona')||text.includes('Great combo'))return;
+  navigator.clipboard.writeText(text).catch(()=>{});
+  const t=document.getElementById('toast');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);
+}
+</script>
+</body>
+</html>
